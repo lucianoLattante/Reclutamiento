@@ -5,7 +5,9 @@ package com.Grupo6.ReclutamientoEmpleados.Controladores;
 import com.Grupo6.ReclutamientoEmpleados.Entidades.Empleado;
 import com.Grupo6.ReclutamientoEmpleados.Errores.ErrorWeb;
 import com.Grupo6.ReclutamientoEmpleados.Repositorios.CategoriaRepositorio;
-import com.Grupo6.ReclutamientoEmpleados.Repositorios.EmpleadoRepositorio;
+import com.Grupo6.ReclutamientoEmpleados.Formularios.PerfilCandidatoForm;
+import com.Grupo6.ReclutamientoEmpleados.Servicios.CuentaPropia;
+import java.security.Principal;
 import com.Grupo6.ReclutamientoEmpleados.Servicios.CategoriaServicio;
 import com.Grupo6.ReclutamientoEmpleados.Servicios.EmpleadoServicio;
 import com.Grupo6.ReclutamientoEmpleados.Servicios.LocalidadServicio;
@@ -39,7 +41,7 @@ public class EmpleadoControlador {
     private EmpleadoServicio empleadoServicio;
     
     @Autowired
-    private EmpleadoRepositorio empleadoRepositorio;
+    private CuentaPropia cuentaPropia;
     
     @Autowired
     private CategoriaServicio categoriaServicio;
@@ -55,36 +57,25 @@ public class EmpleadoControlador {
     }
     
     @GetMapping("/editar")
-    @PreAuthorize("hasAnyRole('ROLE_CANDIDATO')")
-    public String editarEmpleado(Model model,@RequestParam(required = false) String id){
-        if (id != null){
-            Optional<Empleado> optional= empleadoRepositorio.findById(id);
-            if (optional.isPresent()){
-                model.addAttribute("categoria",categoriaServicio.listaCategorias());
-                model.addAttribute("localidad", localidadServicio.listarLocalidad());
-                model.addAttribute("empleado",optional.get());
-            }else{
-                return "redirect:/editar-empleado";
-            }
-        }else{
-            model.addAttribute("empleado",new Empleado());
-        }
-        
+    public String editarEmpleado(Model model, Principal principal, @RequestParam(required = false) String id) {
+        Empleado empleado = cuentaPropia.require(principal.getName(), id, Empleado.class);
+        model.addAttribute("categoria", categoriaServicio.listaCategorias());
+        model.addAttribute("localidad", localidadServicio.listarLocalidad());
+        model.addAttribute("empleado", PerfilCandidatoForm.from(empleado));
         return "editar-empleado";
     }
-    
+
     @PostMapping("/save-empleado")
-    @PreAuthorize("hasAnyRole('ROLE_CANDIDATO')")
-    public String saveEmpleado(@RequestParam (required = false) String id ,Model model,RedirectAttributes redirectAttributes,@ModelAttribute Empleado empleado,MultipartFile imagen) throws IOException{
+    public String saveEmpleado(Principal principal, @RequestParam(required = false) String id,
+            @ModelAttribute("empleado") PerfilCandidatoForm form, MultipartFile imagen,
+            RedirectAttributes attributes) throws IOException {
         try {
-            empleadoServicio.save(id,empleado,imagen);
-            redirectAttributes.addFlashAttribute("success","Empleado cambiado con éxito");
+            empleadoServicio.actualizarPerfil(principal.getName(), id, form, imagen);
+            attributes.addFlashAttribute("success", "Perfil actualizado");
+            return "redirect:/interfaz-empleado";
         } catch (ErrorWeb e) {
-            e.printStackTrace();
-            model.addAttribute("error",e.getMessage());
-            redirectAttributes.addFlashAttribute("error",e.getMessage());
-            return "redirect:/interfaz-empleado/editar?id=" + id;
-        } 
-        return "redirect:/";
+            attributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/interfaz-empleado/editar";
+        }
     }
 }

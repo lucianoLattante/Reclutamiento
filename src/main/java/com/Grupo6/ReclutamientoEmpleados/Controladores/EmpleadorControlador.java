@@ -2,7 +2,8 @@ package com.Grupo6.ReclutamientoEmpleados.Controladores;
 
 import com.Grupo6.ReclutamientoEmpleados.Entidades.Empleador;
 import com.Grupo6.ReclutamientoEmpleados.Errores.ErrorWeb;
-import com.Grupo6.ReclutamientoEmpleados.Repositorios.EmpleadorRepositorio;
+import com.Grupo6.ReclutamientoEmpleados.Servicios.CuentaPropia;
+import java.security.Principal;
 import com.Grupo6.ReclutamientoEmpleados.Servicios.EmpleadorServicio;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,40 +27,24 @@ public class EmpleadorControlador {
     private EmpleadorServicio empleadorServicio;
     
     @Autowired
-    private EmpleadorRepositorio empleadorRepositorio;
-    
+    private CuentaPropia cuentaPropia;
+
     @GetMapping("")
-    @PreAuthorize("hasAnyRole('ROLE_EMPRESA')")
-    public String editarEmpleador(Model model){
-        Authentication auth= SecurityContextHolder.getContext().getAuthentication();
-        String id=empleadorServicio.findByName(auth.getName()).getId();
-        if (id != null){
-            Optional<Empleador> optional= empleadorRepositorio.findById(id);
-            if (optional.isPresent()){
-                model.addAttribute("empleador",optional.get());
-            }else{
-                return "redirect:/";
-            }
-        }else{
-            model.addAttribute("empleador",new Empleador());
-        }
-        
+    public String editarEmpleador(Model model, Principal principal, @RequestParam(required = false) String id) {
+        model.addAttribute("nombreEmpresa", cuentaPropia.require(principal.getName(), id, Empleador.class).getNombreEmpresa());
         return "editar-empleador";
     }
-    
+
     @PostMapping("/save-empleador")
-    @PreAuthorize("hasAnyRole('ROLE_EMPRESA')")
-    public String saveEmpleador(@RequestParam (required = false) String id,Model model,RedirectAttributes redirectAttributes,@ModelAttribute Empleador empleador){
+    public String saveEmpleador(Principal principal, @RequestParam(required = false) String id,
+            @RequestParam String nombreEmpresa, RedirectAttributes attributes) {
         try {
-            empleadorServicio.save(id,empleador);
-            redirectAttributes.addFlashAttribute("success","Empleador cambiado con éxito");
+            empleadorServicio.actualizarPerfil(principal.getName(), id, nombreEmpresa);
+            attributes.addFlashAttribute("success", "Perfil actualizado");
+            return "redirect:/";
         } catch (ErrorWeb e) {
-            e.printStackTrace();
-            model.addAttribute("error",e.getMessage());
-            redirectAttributes.addFlashAttribute("error",e.getMessage());
-            return "redirect:/editar-empleador?id=" + id;
+            attributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/editar-empleador";
         }
-        
-        return "redirect:/";
     }
 }

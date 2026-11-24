@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><title>Mi cuenta</title></head>
+<body>
+<main>
+    <h1>Mi cuenta</h1>
+    <p th:if="${success}" th:text="${success}" role="status"></p>
+    <p th:if="${error}" th:text="${error}" role="alert"></p>
+    <form method="post" th:action="@{/registro/save-usuario}">
+        <label>Nombre de usuario <input name="nombre" th:value="${nombreUsuario}" maxlength="100" required></label>
+        <button type="submit">Guardar nombre</button>
+    </form>
+    <form method="post" th:action="@{/registro/cambiar-contrasenha}">
+        <label>Contraseña actual <input type="password" name="actual" autocomplete="current-password" required></label>
+        <label>Nueva contraseña <input type="password" name="nueva" autocomplete="new-password" minlength="8" required></label>
+        <label>Confirmar contraseña <input type="password" name="confirmacion" autocomplete="new-password" minlength="8" required></label>
+        <button type="submit">Cambiar contraseña</button>
+    </form>
+    <a th:href="@{/}">Inicio</a>
+</main>
+</body>
+</html>

@@ -19,20 +19,17 @@
         </div>
        
         <div class="input-container2" id="input-container-registros">
-            <form method="POST" th:action="@{/editar-empleador/save-empleador}" th:object="${empleador}">
-                <input hidden th:field="*{id}" name="id">
+            <form method="POST" th:action="@{/editar-empleador/save-empleador}">
                 
                 <div>
                     <label>Nombre de usuario</label><br>
-                    <input type="text"  class="form-control" th:field="*{nombre_usuario}"><br>
                </div>
                <div>
                     <label>Contraseña</label><br>
-                    <input type="password"  class="form-control" th:field="*{contrasenha}"><br>
                 </div>
                 <div>
                     <label>Nombre de empresa</label><br>
-                    <input type="text" class="form-control" th:field="*{nombreEmpresa}"><br>
+                    <input type="text" class="form-control" name="nombreEmpresa" th:value="${nombreEmpresa}" required><br>
                 </div>
               
                 <button class="btn2" id="btnRegistro" type="submit">Enviar</button>

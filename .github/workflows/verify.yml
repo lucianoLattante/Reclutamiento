@@ -1,0 +1,24 @@
+name: Verify source security
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Extract audited source paths
+        run: |
+          set -euo pipefail
+          git init --quiet "$RUNNER_TEMP/review-source"
+          git -C "$RUNNER_TEMP/review-source" fetch --depth=1 --no-tags "https://github.com/$GITHUB_REPOSITORY.git" "$GITHUB_SHA"
+          git -C "$RUNNER_TEMP/review-source" archive FETCH_HEAD pom.xml src | tar -xf -
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: test ! -d target
+      - run: mvn -B --no-transfer-progress -Dtest=AccountOwnershipWebTest test

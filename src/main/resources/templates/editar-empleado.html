@@ -23,15 +23,12 @@
             <div class="input-container2" id="input-container-registros">
 
                 <form method="POST" th:action="@{/interfaz-empleado/save-empleado}" enctype="multipart/form-data" th:object="${empleado}">
-                    <input hidden th:field="*{id}" name="id">
 
                     <div>
                         <label>Nombre de usuario</label><br>
-                        <input type="text"  class="form-control" th:field="*{nombre_usuario}" name="nombre_usuario"><br>
                     </div> 
                     <div>
                         <label>Contraseña</label><br>
-                        <input type="password"  class="form-control"  th:field="*{contrasenha}" name="contrasenha"><br>
                     </div>
 
                     <div>
@@ -64,7 +61,6 @@
                     <div> 
 
                         <label>Localidad</label><br>
-                        <input type="text"  class="form-control" th:field="*{localidad}" name="localidad"><br>
                     </div>
                     <div> 
                         <label>Número de contacto</label><br>
@@ -111,7 +107,7 @@
                     <!--                    <div> 
                                             <label>Seleccione su Localidad</label>
                                             <br>
-                                            <input class="form-check-input"  th:each="L : ${localidad}" th:field="*{localidad}" th:text="${L.nombre}" th:value="${{L}}" type="checkbox" name="localidad">
+                                            <input class="form-check-input"  th:each="L : ${localidad}" th:field="*{localidad}" th:text="${L.nombre}" th:value="${L.id}" type="checkbox" name="localidad">
                                             <label class="form-check-label" for="flexCheckDefault">
                                             </label>
                                         </div> -->
@@ -120,14 +116,14 @@
                         <select class="form-control" th:field="*{localidad}">
                             <label>Elegir la localidad de residencia</label>
                             <option value="0">Seleccione Localidad</option>
-                            <option th:each="l : ${localidad}" th:value="${{l}}" th:text="${l.nombre}"></option>
+                            <option th:each="l : ${localidad}" th:value="${l.id}" th:text="${l.nombre}"></option>
                         </select>
                     </div>
 
                     <div> 
                         <br>
                         <label>Elegir nueva categoria</label><br>
-                        <input class="form-check-input"  th:each="C : ${categoria}" th:field="*{categorias}" th:text="${C.nombre}" th:value="${{C}}" type="checkbox" name="categorias">
+                        <input class="form-check-input"  th:each="C : ${categoria}" th:field="*{categorias}" th:text="${C.nombre}" th:value="${C.id}" type="checkbox" name="categorias">
                         <br>
                         <label class="form-check-label" for="flexCheckDefault">                          
                         </label>

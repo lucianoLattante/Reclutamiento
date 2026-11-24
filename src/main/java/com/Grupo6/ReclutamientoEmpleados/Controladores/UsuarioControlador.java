@@ -1,7 +1,10 @@
 package com.Grupo6.ReclutamientoEmpleados.Controladores;
 
 import com.Grupo6.ReclutamientoEmpleados.Entidades.Categoria;
-import com.Grupo6.ReclutamientoEmpleados.Entidades.Empleado;
+import com.Grupo6.ReclutamientoEmpleados.Formularios.RegistroCandidatoForm;
+import com.Grupo6.ReclutamientoEmpleados.Servicios.CuentaPropia;
+import java.security.Principal;
+import javax.servlet.http.HttpServletRequest;
 import com.Grupo6.ReclutamientoEmpleados.Entidades.Usuario;
 import com.Grupo6.ReclutamientoEmpleados.Enums.CarnetConducir;
 import com.Grupo6.ReclutamientoEmpleados.Enums.DisponibilidadHoraria;
@@ -11,7 +14,6 @@ import com.Grupo6.ReclutamientoEmpleados.Enums.PosibleReubicacion;
 import com.Grupo6.ReclutamientoEmpleados.Enums.Sexo;
 import com.Grupo6.ReclutamientoEmpleados.Errores.ErrorWeb;
 import com.Grupo6.ReclutamientoEmpleados.Repositorios.CategoriaRepositorio;
-import com.Grupo6.ReclutamientoEmpleados.Repositorios.UsuarioRepositorio;
 import com.Grupo6.ReclutamientoEmpleados.Servicios.CategoriaServicio;
 import com.Grupo6.ReclutamientoEmpleados.Servicios.LocalidadServicio;
 import com.Grupo6.ReclutamientoEmpleados.Servicios.UsuarioServicio;
@@ -39,7 +41,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class UsuarioControlador {
 
     @Autowired
-    private UsuarioRepositorio usuarioRepositorio;
+    private CuentaPropia cuentaPropia;
 
     @Autowired
     private UsuarioServicio usuarioServicio;
@@ -59,7 +61,7 @@ public class UsuarioControlador {
     public String registroEmpleado(ModelMap model) {
         model.addAttribute("categoria", categoriaServicio.listaCategorias());
         model.addAttribute("localidad", localidadServicio.listarLocalidad());
-        model.addAttribute("empleado", new Empleado());
+        model.addAttribute("empleado", new RegistroCandidatoForm());
         return "registroEmpleado";
     }
 
@@ -80,7 +82,7 @@ public class UsuarioControlador {
     }
 
     @PostMapping("/registrar-empleado")
-    public String registrarNuevoEmpleado(Model model, RedirectAttributes redirectAttributes, @ModelAttribute Empleado empleado, @RequestParam String password2, MultipartFile imagen) throws IOException {
+    public String registrarNuevoEmpleado(Model model, RedirectAttributes redirectAttributes, @ModelAttribute("empleado") RegistroCandidatoForm empleado, @RequestParam String password2, MultipartFile imagen) throws IOException {
         try {
 
             usuarioServicio.crearUsuarioEmpleado(password2, empleado, imagen);
@@ -90,8 +92,7 @@ public class UsuarioControlador {
             return "redirect:/";
         } catch (ErrorWeb e) {
             model.addAttribute("error", e.getMessage());
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
+            empleado.setContrasenha(null);
             model.addAttribute("empleado", empleado);
             model.addAttribute("categoria", categoriaServicio.listaCategorias());
             model.addAttribute("localidad", localidadServicio.listarLocalidad());
@@ -101,33 +102,34 @@ public class UsuarioControlador {
     }
 
     @GetMapping("/modificar-usuario")
-    @PreAuthorize("hasAnyRole('ROLE_EMPLEADOR','ROLE_CANDIDATO')")
-    public String modificarUsuario(Model model, @RequestParam(required = false) String id) {
-        if (id != null) {
-            Optional<Usuario> optional = usuarioRepositorio.findById(id);
-            if (optional.isPresent()) {
-                model.addAttribute("usuario", optional.get());
-            } else {
-                return "redirect:/modificar-usuario";
-            }
-        } else {
-            model.addAttribute("usuario", new Usuario());
-        }
-
+    public String modificarUsuario(Model model, Principal principal, @RequestParam(required = false) String id) {
+        model.addAttribute("nombreUsuario", cuentaPropia.require(principal.getName(), id).getNombre_usuario());
         return "modificar-usuario";
     }
 
     @PostMapping("/save-usuario")
-    @PreAuthorize("hasAnyRole('ROLE_EMPLEADOR','ROLE_CANDIDATO')")
-    public String saveUsuario(Model model, RedirectAttributes redirectAttributes, @ModelAttribute Usuario usuario) {
+    public String saveUsuario(Principal principal, @RequestParam(required = false) String id,
+            @RequestParam String nombre, RedirectAttributes attributes, HttpServletRequest request) {
         try {
-            usuarioServicio.save(usuario);
-            redirectAttributes.addFlashAttribute("success", "Datos cambiados con éxito");
+            usuarioServicio.actualizarNombre(principal.getName(), id, nombre);
+            request.getSession().invalidate();
+            return "redirect:/login";
         } catch (ErrorWeb e) {
-            e.printStackTrace();
+            attributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/registro/modificar-usuario";
         }
+    }
 
-        return "redirect:/lista-usuario";
+    @PostMapping("/cambiar-contrasenha")
+    public String cambiarContrasenha(Principal principal, @RequestParam(required = false) String id,
+            @RequestParam String actual, @RequestParam String nueva, @RequestParam String confirmacion,
+            RedirectAttributes attributes) {
+        try {
+            usuarioServicio.cambiarContrasenha(principal.getName(), id, actual, nueva, confirmacion);
+            attributes.addFlashAttribute("success", "Contraseña actualizada");
+        } catch (ErrorWeb e) {
+            attributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/registro/modificar-usuario";
     }
 }

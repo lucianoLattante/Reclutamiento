@@ -10,6 +10,8 @@ import com.Grupo6.ReclutamientoEmpleados.Repositorios.EmpleadoRepositorio;
 import com.Grupo6.ReclutamientoEmpleados.Repositorios.EmpleadorRepositorio;
 import com.Grupo6.ReclutamientoEmpleados.Repositorios.UsuarioRepositorio;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import com.Grupo6.ReclutamientoEmpleados.Formularios.RegistroCandidatoForm;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -30,6 +32,11 @@ public class UsuarioServicio implements UserDetailsService {
 
     @Autowired
     private UsuarioRepositorio usuarioRepositorio;
+
+    @Autowired
+    private CuentaPropia cuentaPropia;
+
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Autowired
     private EmpleadoServicio empleadoServicio;
@@ -104,20 +111,38 @@ public class UsuarioServicio implements UserDetailsService {
     }
 
     @Transactional
-    public Usuario save(Usuario usuario) throws ErrorWeb {
-        if (usuario.getNombre_usuario() == null) {
-            throw new ErrorWeb("Ingrese un nombre de usuario correcto");
+    public void actualizarNombre(String principal, String id, String nombre) throws ErrorWeb {
+        Usuario usuario = cuentaPropia.require(principal, id);
+        if (nombre == null || nombre.trim().isEmpty() || nombre.length() > 100) {
+            throw new ErrorWeb("Ingrese un nombre de usuario válido");
         }
-
-        if (usuario.getContrasenha() == null || usuario.getContrasenha().length() <= 5) {
-            throw new ErrorWeb("Ingrese una contraseña correcta");
+        String valor = nombre.trim();
+        if (!valor.equals(usuario.getNombre_usuario())) {
+            validarUsername(valor);
+            usuario.setNombre_usuario(valor);
         }
-
-        return usuarioRepositorio.save(usuario);
     }
 
     @Transactional
-    public Usuario crearUsuarioEmpleado(String password2, Empleado empleado, MultipartFile foto) throws ErrorWeb, IOException {
+    public void cambiarContrasenha(String principal, String id, String actual, String nueva, String confirmacion)
+            throws ErrorWeb {
+        Usuario usuario = cuentaPropia.require(principal, id);
+        if (actual == null || !passwordEncoder.matches(actual, usuario.getContrasenha())) {
+            throw new ErrorWeb("La contraseña actual es incorrecta");
+        }
+        if (nueva == null || nueva.length() < 8 || nueva.getBytes(StandardCharsets.UTF_8).length > 72
+                || !nueva.equals(confirmacion)) {
+            throw new ErrorWeb("Verifique la nueva contraseña y su confirmación");
+        }
+        usuario.setContrasenha(passwordEncoder.encode(nueva));
+    }
+
+    @Transactional(rollbackFor = { ErrorWeb.class, IOException.class })
+    public Usuario crearUsuarioEmpleado(String password2, RegistroCandidatoForm form, MultipartFile foto) throws ErrorWeb, IOException {
+        Empleado empleado = new Empleado();
+        empleado.setNombre_usuario(form.getNombre_usuario());
+        empleado.setContrasenha(form.getContrasenha());
+        empleadoServicio.aplicarPerfil(empleado, form);
 
         if (foto == null || foto.isEmpty()) {
             throw new ErrorWeb("La foto no puede estar vacia");
