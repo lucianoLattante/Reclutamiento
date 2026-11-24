@@ -10,10 +10,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          persist-credentials: false
-          sparse-checkout: src
+      - name: Extract audited source paths
+        run: |
+          set -euo pipefail
+          git init --quiet "$RUNNER_TEMP/review-source"
+          git -C "$RUNNER_TEMP/review-source" fetch --depth=1 --no-tags "https://github.com/$GITHUB_REPOSITORY.git" "$GITHUB_SHA"
+          git -C "$RUNNER_TEMP/review-source" archive FETCH_HEAD pom.xml src | tar -xf -
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
         with:
           distribution: temurin
