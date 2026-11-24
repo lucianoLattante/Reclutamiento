@@ -16,6 +16,9 @@ import com.Grupo6.ReclutamientoEmpleados.Repositorios.EmpleadoRepositorio;
 import com.Grupo6.ReclutamientoEmpleados.Repositorios.LocalidadRepositorio;
 import com.Grupo6.ReclutamientoEmpleados.Repositorios.UsuarioRepositorio;
 import java.io.IOException;
+import com.Grupo6.ReclutamientoEmpleados.Formularios.PerfilCandidatoForm;
+import com.Grupo6.ReclutamientoEmpleados.Repositorios.CategoriaRepositorio;
+import java.util.LinkedHashSet;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -40,6 +43,10 @@ public class EmpleadoServicio {
     private UsuarioRepositorio usuarioRepositorio;
     @Autowired
     private LocalidadRepositorio localidadRepositorio;
+    @Autowired
+    private CategoriaRepositorio categoriaRepositorio;
+    @Autowired
+    private CuentaPropia cuentaPropia;
 
     public List<Empleado> listAll() {
 
@@ -47,39 +54,45 @@ public class EmpleadoServicio {
 
     }
 
-    @Transactional
-    public Empleado save(String id, Empleado empleado, MultipartFile imagen) throws IOException, ErrorWeb {
-
-        empleado.setNombre_usuario(validarUsername(id, empleado.getNombre_usuario()));
-
-        validarEmpleado(empleado.getNombre_usuario(), empleado.getContrasenha(), empleado.getContrasenha(), empleado.getNombre(),
-                empleado.getApellido(), empleado.getFechaNac(), empleado.getEmail(), empleado.getSexo(), empleado.getEstudiosAlcanzados(), (MultipartFile) empleado.getFoto(), empleado.getPosiblereubicacion(), empleado.getNumeroTelefonico(), empleado.getMovilidadPropia(),
-                empleado.getCategorias(), empleado.getDisponibilidadHoraria(), empleado.getCarnetConducir());
-
-        if (empleado.getLocalidad() == null) {
-            throw new ErrorWeb("Ingrese una localidad válida");
-        }
-
-        if (imagen == null) {
-
-            empleado.setFoto(empleadoRepositorio.findById(id).get().getFoto());
-            
-        } else {
+    @Transactional(rollbackFor = { ErrorWeb.class, IOException.class })
+    public void actualizarPerfil(String principal, String id, PerfilCandidatoForm form, MultipartFile imagen)
+            throws IOException, ErrorWeb {
+        Empleado empleado = cuentaPropia.require(principal, id, Empleado.class);
+        aplicarPerfil(empleado, form);
+        validarPerfil(empleado.getNombre(), empleado.getApellido(), empleado.getFechaNac(), empleado.getEmail(),
+                empleado.getSexo(), empleado.getEstudiosAlcanzados(), empleado.getPosiblereubicacion(),
+                empleado.getNumeroTelefonico(), empleado.getCategorias(), empleado.getDisponibilidadHoraria(),
+                empleado.getCarnetConducir());
+        if (imagen != null && !imagen.isEmpty()) {
             empleado.setFoto(fotoServicio.guardar(imagen));
         }
+    }
 
-        if (empleado == null) {
-            throw new ErrorWeb("El empleado no existe");
+    void aplicarPerfil(Empleado empleado, PerfilCandidatoForm form) throws ErrorWeb {
+        if (form.getLocalidad() == null || form.getCategorias() == null || form.getCategorias().isEmpty()) {
+            throw new ErrorWeb("Seleccione una localidad y al menos una categoría");
         }
-
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
-        empleado.setContrasenha(encoder.encode(empleado.getContrasenha()));
-
-        empleado.setRol(Rol.CANDIDATO);
-
-        return empleadoRepositorio.save(empleado);
-
+        Localidad localidad = localidadRepositorio.findById(form.getLocalidad())
+                .orElseThrow(() -> new ErrorWeb("Ingrese una localidad válida"));
+        LinkedHashSet<String> ids = new LinkedHashSet<>(form.getCategorias());
+        List<Categoria> categorias = categoriaRepositorio.findAllById(ids);
+        if (categorias.size() != ids.size()) {
+            throw new ErrorWeb("Seleccione categorías válidas");
+        }
+        empleado.setNombre(form.getNombre());
+        empleado.setApellido(form.getApellido());
+        empleado.setFechaNac(form.getFechaNac());
+        empleado.setCategorias(categorias);
+        empleado.setSexo(form.getSexo());
+        empleado.setEstudiosAlcanzados(form.getEstudiosAlcanzados());
+        empleado.setDisponibilidadHoraria(form.getDisponibilidadHoraria());
+        empleado.setMovilidadPropia(form.getMovilidadPropia());
+        empleado.setPosiblereubicacion(form.getPosiblereubicacion());
+        empleado.setCarnetConducir(form.getCarnetConducir());
+        empleado.setEmail(form.getEmail());
+        empleado.setNumeroTelefonico(form.getNumeroTelefonico());
+        empleado.setExperienciaLaboral(form.getExperienciaLaboral());
+        empleado.setLocalidad(localidad);
     }
 
     public void validarEmpleado(String username, String password, String password2, String nombre, String apellido,
@@ -107,6 +120,14 @@ public class EmpleadoServicio {
             throw new ErrorWeb("La foto no puede estar vacía.");
         }
 
+        validarPerfil(nombre, apellido, fechaNac, email, sexo, estudiosAlcanzados, posibleReubicacion,
+                numeroTelefonico, categorias, disponibilidadHoraria, carnetConducir);
+    }
+
+    private void validarPerfil(String nombre, String apellido, Date fechaNac, String email, Sexo sexo,
+            EstudiosAlcanzados estudiosAlcanzados, PosibleReubicacion posibleReubicacion,
+            String numeroTelefonico, List<Categoria> categorias, DisponibilidadHoraria disponibilidadHoraria,
+            CarnetConducir carnetConducir) throws ErrorWeb {
         if (nombre == null || nombre.length() < 3) {
             throw new ErrorWeb("El nombre debe contener al menos 3 caracteres");
         }
@@ -139,7 +160,7 @@ public class EmpleadoServicio {
         if (numeroTelefonico == null || numeroTelefonico.length() != 10) {
             throw new ErrorWeb("Ingrese su número telefónico con diez dígitos, sin 0 y sin 15 ej: 3417123123");
         }
-        if (categorias.isEmpty()) {
+        if (categorias == null || categorias.isEmpty()) {
             throw new ErrorWeb("Ingrese al menos una categoría");
         }
         if (disponibilidadHoraria == null) {
@@ -147,10 +168,6 @@ public class EmpleadoServicio {
         }
         if (carnetConducir == null) {
             throw new ErrorWeb("Ingrese su tipo de carnet de conducir, si posee, o no");
-        }
-        if (categorias.isEmpty() || categorias == null) {
-            throw new ErrorWeb("El campo categoría está vacío");
-
         }
     }
 
@@ -177,18 +194,5 @@ public class EmpleadoServicio {
     public Empleado findByUsername(String username) {
         Empleado empleado = (Empleado) usuarioRepositorio.findByUsername(username);
         return empleado;
-    }
-
-    public String validarUsername(String id, String username) throws ErrorWeb {
-
-        if (usuarioRepositorio.findById(id).get().getNombre_usuario().equals(username)) {
-            return username;
-        } else {
-            if (usuarioRepositorio.findByUsername(username) != null) {
-                throw new ErrorWeb("El nombre de usuario ya se encuentra registrado");
-            } else {
-                return username;
-            }
-        }
     }
 }

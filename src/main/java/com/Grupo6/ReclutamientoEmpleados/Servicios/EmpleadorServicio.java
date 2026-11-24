@@ -23,49 +23,19 @@ public class EmpleadorServicio{
     @Autowired
     private UsuarioRepositorio usuarioRepositorio;
     
-    @Transactional
-    public Empleador save(String id,Empleador empleador) throws ErrorWeb{
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        
-        empleador.setNombre_usuario(validarUsername(id,empleador.getNombre_usuario()));
-        
-        if (empleador==null){
-            throw new ErrorWeb("El usuario no puede ser nulo");
-        }
-        
-        if (empleador.getContrasenha().length() <= 5 || empleador.getContrasenha().isEmpty()){
-            throw new ErrorWeb("Ingrese una contraseña correcta");
-        }else{
-            empleador.setContrasenha(encoder.encode(empleador.getContrasenha()));
-        }
+    @Autowired
+    private CuentaPropia cuentaPropia;
 
-        if (empleador.getNombreEmpresa()==null || empleador.getNombreEmpresa().isEmpty()){
-            throw new ErrorWeb("Ingrese un nombre de empresa");
+    @Transactional
+    public void actualizarPerfil(String principal, String id, String nombreEmpresa) throws ErrorWeb {
+        Empleador empleador = cuentaPropia.require(principal, id, Empleador.class);
+        if (nombreEmpresa == null || nombreEmpresa.trim().isEmpty() || nombreEmpresa.length() > 150) {
+            throw new ErrorWeb("Ingrese un nombre de empresa válido");
         }
-        
-        if (empleador.getNombre_usuario()==null || empleador.getNombre_usuario().isEmpty()){
-            throw new ErrorWeb("Ingrese un nombre de usuario");
-        }
-        
-        empleador.setRol(Rol.EMPRESA);
-        
-        return empleadorRepositorio.save(empleador);
+        empleador.setNombreEmpresa(nombreEmpresa.trim());
     }
 
     public Empleador findByName(String nombre){
         return empleadorRepositorio.findByUsername(nombre);
-    }
-    
-    public String validarUsername(String id,String username) throws ErrorWeb{
-    
-        if (usuarioRepositorio.findById(id).get().getNombre_usuario().equals(username)) {
-            return username;
-        }else{
-            if (usuarioRepositorio.findByUsername(username) != null){
-                throw new ErrorWeb("El nombre de usuario ya se encuentra registrado");
-            }else{
-                return username;
-            }
-        }
     }
 }

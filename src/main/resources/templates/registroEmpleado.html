@@ -109,7 +109,7 @@
 
                     <div> 
                         <label>Elegir la categoría a la que desea postularse</label><br>
-                        <input class="form-check-input"  th:each="C : ${categoria}" th:field="*{categorias}" th:text="${C.nombre}" th:value="${{C}}" type="checkbox" name="categorias">
+                        <input class="form-check-input"  th:each="C : ${categoria}" th:field="*{categorias}" th:text="${C.nombre}" th:value="${C.id}" type="checkbox" name="categorias">
                         <label class="form-check-label" for="flexCheckDefault">
                         </label>
                     </div> 
@@ -117,7 +117,7 @@
                     <!--                    <div> 
                                             <label>Seleccione su Localidad</label>
                                             <br>
-                                            <input class="form-check-input"  th:each="L : ${localidad}" th:field="*{localidad}" th:text="${L.nombre}" th:value="${{L}}" type="checkbox" name="localidad">
+                                            <input class="form-check-input"  th:each="L : ${localidad}" th:field="*{localidad}" th:text="${L.nombre}" th:value="${L.id}" type="checkbox" name="localidad">
                                             <label class="form-check-label" for="flexCheckDefault">
                                             </label>
                                         </div> -->
@@ -126,7 +126,7 @@
                         <select class="form-control" th:field="*{localidad}">
                             
                             <option value="0">Seleccione Localidad</option>
-                            <option th:each="l : ${localidad}" th:value="${{l}}" th:text="${l.nombre}"></option>
+                            <option th:each="l : ${localidad}" th:value="${l.id}" th:text="${l.nombre}"></option>
                         </select>
                     </div>
 

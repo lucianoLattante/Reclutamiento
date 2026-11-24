@@ -30,7 +30,8 @@
                         </form>
                     </li>
                     <li>
-                        <form th:action="@{/logout}" sec:authorize="isAuthenticated()">
+                        <a th:href="@{/registro/modificar-usuario}" sec:authorize="isAuthenticated()">Mi cuenta</a>
+                        <form method="post" th:action="@{/logout}" sec:authorize="isAuthenticated()">
                             <button type="submit" class="btn2">Cerrar sesión</button>
                         </form>
                     </li>
